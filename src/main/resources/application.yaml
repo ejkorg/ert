@@ -1,0 +1,30 @@
+# ALL configuration
+
+spring:
+  profiles:
+    active: @activatedProperties@
+  sql:
+    init:
+      mode: embedded
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+
+application:
+  version: @project.version@
+
+springdoc:
+  swagger-ui:
+    path: /api-docs
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+management:
+  endpoint:
+    metrics:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: metrics

@@ -1,0 +1,11 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnProdController\nGET /api/onprod/byproduct]
+    Controller --> Normalize[Normalize product code\nStringUtils.upperCase]
+    Normalize --> Service[OnProdService.findByProduct]
+    Service --> Repo[OnProdRepository.findByProduct]
+    Repo -- Found --> Map[Map OnProd entity to OnProdDto\nStatus.FOUND]
+    Repo -- Not Found --> NoData[Create empty OnProdDto\nStatus.NO_DATA]
+
+    Map --> ControllerResponse[Controller writes HTTP 200]
+    NoData --> ControllerResponse
+    ControllerResponse --> ClientResponse[(HTTP 200 JSON)]

@@ -1,0 +1,68 @@
+# LOCAL configuration
+
+spring:
+  datasource:
+    jdbcUrl: jdbc:h2:mem:ReferenceTablesDb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+    minimumIdle: 3
+    maximumPoolSize: 10
+    hikari:
+      connectionTestQuery: select 1
+      poolName: Application
+  h2:
+    console:
+      enabled: true
+  sql:
+    init:
+      mode: always
+      platform: h2
+
+#spring:
+#  datasource:
+##    jdbcUrl: jdbc:oracle:thin:@exnqa-db.onsemi.com:1740:EXNQA
+#    jdbcUrl: jdbc:oracle:thin:@localhost:1740:EXNQA
+#    driverClassName: oracle.jdbc.OracleDriver
+#    username: refdb
+#    password: br#^gox66312sdAB
+#    minimumIdle: 3
+#    maximumPoolSize: 10
+#    hikari:
+#      connectionTestQuery: select 1 from dual
+#      poolName: Application
+#  jpa:
+#    database-platform: org.hibernate.dialect.Oracle12cDialect
+
+datawarehouse:
+  datasource:
+    jdbcUrl: jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(LOAD_BALANCE=OFF)(FAILOVER=ON)(ADDRESS=(PROTOCOL=TCP)(HOST=exa01cl03-scan.onsemi.com)(PORT=1521))(ADDRESS=(PROTOCOL=TCP)(HOST=exa02cl04-scan.onsemi.com)(PORT=1521))(ADDRESS=(PROTOCOL=TCP)(HOST=exa05cl03-scan.onsemi.com)(PORT=1521)))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=svcDWPRD.onsemi.com)))
+    driverClassName: oracle.jdbc.OracleDriver
+    username: dw_query
+    password: dw_query
+    minimumIdle: 3
+    maximumPoolSize: 10
+    hikari:
+      connectionTestQuery: select 1 from dual
+      poolName: DataWarehouse
+  jpa:
+    database-platform: org.hibernate.dialect.Oracle12cDialect
+
+lotg:
+  datasource:
+    jdbcUrl: jdbc:oracle:thin:@localhost:15210/svcLOTGDEV.onsemi.com
+#    jdbcUrl: jdbc:oracle:thin:@exa01cl02-scan.onsemi.com:1521/svcLOTGPRD.onsemi.com
+    driverClassName: oracle.jdbc.OracleDriver
+    username: LOTG_READ
+    password: lotgr
+#    password: prdlotgr
+    minimumIdle: 3
+    maximumPoolSize: 10
+    hikari:
+      connectionTestQuery: select 1 from dual
+      poolName: LotG
+  jpa:
+    database-platform: org.hibernate.dialect.Oracle12cDialect
+
+ert:
+  log_conf_path: ./src/main/resources/logback-default-local.xml

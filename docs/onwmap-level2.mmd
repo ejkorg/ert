@@ -1,0 +1,40 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnWmapController\nGET /api/onwmap/byproduct/{wmcServiceKey}/{product}/{searchedLotPart}]
+    Controller --> Normalize[Uppercase keys\nwmcServiceKey/product/searchedLotPart/fab/dataType]
+    Normalize --> ResolveFab[OnFabConfService.getByFabAndDataTypeOrFabOnly]
+    ResolveFab --> HasMatchup{Matchup URL present?}
+
+    HasMatchup -- Yes --> MatchupCall[MatchupLoader.loadMatchupByLotScribeEndDate]
+    MatchupCall --> MatchupResult{Matchup status FOUND?}
+    MatchupResult -- Yes --> UseCfgId[Extract idWaferMapConfiguration]
+    UseCfgId --> ServiceCfg[OnWmapService.findByCfgId]
+    ServiceCfg --> RepoCfg[OnWmapRepository.findByCfgId]
+    RepoCfg -- Found & complete --> MapFoundCfg[Map cached OnWmap]
+    RepoCfg -- Missing --> WmcUrlCfg[Resolve WMC URL\nfrom OnFabConf or ErtConf]
+    WmcUrlCfg --> CallerCfg[Caller.getWmcByWmcId]
+    CallerCfg --> AggregateCfg[caller.assignWmcResults]
+    AggregateCfg --> PersistCfg[OnWmapRepository.save]
+    PersistCfg --> MapFoundCfg
+
+    MatchupResult -- No --> FallbackService[Invoke Service path]
+
+    HasMatchup -- No --> FallbackService
+
+    FallbackService --> ServiceProd[OnWmapService.findByProduct]
+    ServiceProd --> RepoProd[OnWmapRepository.findByProduct]
+    RepoProd -- Found & complete --> MapFoundProd[Map cached OnWmap]
+    RepoProd -- Missing --> WmcUrlProd[Resolve WMC URL\nfrom OnFabConf or ErtConf]
+    WmcUrlProd --> CallerPrimary[Caller.getWmcByDevice(wmcServiceKey)]
+    CallerPrimary --> PrimaryFound{WMC result?}
+    PrimaryFound -- No --> CallerSecondary[Caller.getWmcByDevice(product)\nwith /PCM fallback]
+    CallerSecondary --> SecondaryFound{WMC result?}
+    SecondaryFound -- No --> NoData[Return DTO Status.NO_DATA]
+    SecondaryFound -- Yes --> AggregateProd[caller.assignWmcResults]
+    PrimaryFound -- Yes --> AggregateProd
+    AggregateProd --> PersistProd[OnWmapRepository.save]
+    PersistProd --> MapFoundProd
+
+    MapFoundCfg --> ControllerResponse[Controller builds HTTP 200]
+    MapFoundProd --> ControllerResponse
+    NoData --> ControllerResponse
+    ControllerResponse --> ClientResponse[(HTTP 200 JSON)]

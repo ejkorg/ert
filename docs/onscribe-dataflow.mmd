@@ -1,0 +1,77 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnScribeController
+    /api/onscribe/*]
+    Controller -->|byLotId+waferNum
+or byLotIds| ServiceLot[OnScribeService.findByLotAndWaferNum]
+    Controller -->|byScribeId| ServiceScribe[OnScribeService.findByScribeId]
+    Controller -->|byStdfInfo| ServiceStdf[OnScribeService.findByLotIdAndWaferNumAndScribeId]
+
+    subgraph Lot+Wafer path
+        ServiceLot --> RepoLot[OnScribeRepository
+findByLotAndWaferNum]
+        RepoLot -- Status found everywhere --> ReturnLot[Map to OnScribeDto]
+        RepoLot -- Missing / incomplete --> InitLot[Reuse or create OnScribe entity]
+        InitLot --> ConfigLot[Load OnFabConf
+(or fall back to ErtConf)]
+        ConfigLot --> DecideLot[Choose lot vs mfgLot
+(LotIdForOnScribeType)]
+        ConfigLot --> VidUrl[Resolve VID→SCRIBE URL
++ ScribeResultType]
+        ConfigLot --> Pattern[waferIdCreationPattern?]
+        DecideLot --> CallerVid[Caller.getWaferIdByLotAndWaferNum]
+        VidUrl --> CallerVid
+        CallerVid -->|WaferId payload| LotWaferFound{Status FOUND?
+& no "No LaserScribe"}
+        CallerVid -->|Exception / null| LotWaferFound
+        LotWaferFound -- Yes --> OnLotCache[OnLotService.findByLotId
+onlyFromDb=true]
+        OnLotCache --> MergeLot[caller.fillOnScribeByWaferIdResults
+(onScribeWaferIdEqualsScribeId?)]
+        MergeLot --> PersistLot[OnScribeRepository.save]
+        LotWaferFound -- No --> CalcLot[AttributeUtils.calculateWaferId
+waferIdSource=CALCULATED]
+        Pattern --> CalcLot
+        DecideLot --> CalcLot
+        CalcLot --> PersistLot
+        PersistLot --> ReturnLot
+    end
+
+    subgraph Scribe → VID path
+        ServiceScribe --> RepoScribe[OnScribeRepository
+findByScribeId]
+        RepoScribe -- Status found everywhere --> ReturnScribe[Map to DTO]
+        RepoScribe -- Missing / incomplete --> InitScribe[Reuse or create OnScribe entity]
+        InitScribe --> ConfigScribe[Load OnFabConf
+(or fall back to ErtConf)]
+        ConfigScribe --> ValidateLot[If result type=WAFER_ID
+and URL needs {lotId}, require lotId]
+        ConfigScribe --> ScribeUrl[Resolve SCRIBE→VID URL
++ ScribeResultType]
+        ScribeUrl --> CallerScribe[Caller.getWaferIdByScribeId]
+        CallerScribe -->|Payload FOUND| ScribeFound{Lot/Vid/LaserScribe present?}
+        ScribeFound -- Yes --> UpdateScribe[updateOnScribeByWaferId
+(uses OnLot cache)]
+        UpdateScribe --> ReturnScribe
+        ScribeFound -- No --> MarkNoData[Set Status.NO_DATA]
+        MarkNoData --> ReturnScribe
+        CallerScribe -->|Error / not FOUND| ThrowError[BusinessException]
+    end
+
+    subgraph STDF helper path
+        ServiceStdf --> RepoStdf[OnScribeRepository
+findByScribeId]
+        RepoStdf -- Status found everywhere --> ReturnStdf[Map to DTO]
+        RepoStdf -- Missing / incomplete --> ConfigStdf[OnFabConf + ErtConf]
+        ConfigStdf --> ScribeCall[Caller.getWaferIdByScribeId]
+        ScribeCall -->|Status FOUND| UpdateStdf[updateOnScribeByWaferId]
+        UpdateStdf --> ReturnStdf
+        ScribeCall -->|Error / not FOUND| CalcStdf[updateOnScribeByLotIdScribeIdWaferNumFab
+AttributeUtils.calculateWaferId]
+        CalcStdf --> ReturnStdf
+    end
+
+    ReturnLot --> DtoBack[Controller returns OnScribeDto]
+    ReturnScribe --> DtoBack
+    ReturnStdf --> DtoBack
+    ThrowError --> ErrorPath[Controller maps to Status.ERROR or 4xx/5xx]
+    DtoBack --> ClientResponse[(HTTP JSON response)]

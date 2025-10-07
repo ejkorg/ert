@@ -1,0 +1,46 @@
+flowchart TD
+    %% REST exposure
+    subgraph REST_API
+        Client[(Client / Integration)] --> Controller[OnProdController]
+        Controller --> Service[OnProdService]
+        Service --> RepoRead[OnProdRepository]
+        RepoRead --> DTO[OnProdDto response]
+        DTO --> Client
+    end
+
+    %% Enrichment pipeline when OnLotService runs
+    subgraph Enrichment_via_OnLot
+        OnLotCall[OnLotService.findByLotId] --> CheckCache{OnProd exists?}
+        CheckCache -- yes --> UseCached[Reuse persisted OnProd]
+        CheckCache -- no --> Orchestrate[Build aggregate OnProd]
+
+        Orchestrate --> Lotg[LotgInfoService / Caller.assignLotGInfoResults]
+        Orchestrate --> Dw[DataWarehouseService.getDwPlmByPartId]
+        Orchestrate --> MesConfig[OnSiteConfRepository.getBySite]
+
+        MesConfig --> MesType{mesType}
+        MesType -- TORRENT --> Torrent[TorrentService.getMesDto
+(JDBC using ON_SITE_CONF credentials)]
+        MesType -- GENESIS --> Genesis[GenesisService.getMesDto]
+        MesType -- other/none --> SkipMes[Skip MES fetch]
+
+        Torrent --> MesDto[MesDto]
+        Genesis --> MesDto
+        SkipMes --> Merge
+
+        Lotg --> Merge[Caller.merge results
+LotG + DW + MES]
+        Dw --> Merge
+        MesDto --> Merge
+
+        Merge --> Persist{Product present?}
+        Persist -- yes --> RepoSave[OnProdRepository.save]
+        RepoSave --> UseCached
+        Persist -- no --> UseCached
+
+        UseCached --> OnLotReturn[OnLotDto + OnProdDto cached]
+    end
+
+    %% Cross-links
+    RepoSave -.-> RepoRead
+    RepoRead -.-> RepoSave

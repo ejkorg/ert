@@ -1,0 +1,49 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnSliceController
+/api/onslice/*]
+
+    Controller -->|GET /all| ServiceAll[OnSliceService.findAll]
+    Controller -->|GET /byid/{id}| ServiceById[OnSliceService.findById]
+    Controller -->|GET /byslice/{slice}| ServiceBySlice[OnSliceService.findBySlice]
+    Controller -->|GET /byglobalwaferid/{gwid}| ServiceByGwid[OnSliceService.findByGlobalWaferId]
+    Controller -->|POST /create| ServiceCreate[OnSliceService.createFromDto]
+    Controller -->|PUT /update/{id}| ServiceUpdate[OnSliceService.updateFromDto]
+
+    subgraph Reads
+        ServiceAll --> RepoAll[OnSliceRepository.findAll]
+        ServiceById --> RepoId[OnSliceRepository.findById]
+        ServiceBySlice --> NormalizeSlice[Upper-case slice]
+        NormalizeSlice --> RepoSlice[OnSliceRepository.findBySlice]
+        ServiceByGwid --> NormalizeGwid[Upper-case globalWaferId]
+        NormalizeGwid --> RepoGwid[OnSliceRepository.findByGlobalWaferId]
+        RepoAll --> MapAll[Map each entity to OnSliceDto]
+        RepoId --> MapId[OnSliceDto with Status.FOUND/NO_DATA]
+        RepoSlice --> MapSlice[OnSliceDto with Status.FOUND/NO_DATA]
+        RepoGwid --> MapGwid[OnSliceDto with Status.FOUND/NO_DATA]
+    end
+
+    subgraph Create
+        ServiceCreate --> MapCreate[Construct OnSlice from DTO]
+        MapCreate --> RepoSaveCreate[OnSliceRepository.save]
+        RepoSaveCreate --> DtoCreate[Return DTO, HTTP 201]
+    end
+
+    subgraph Update
+        ServiceUpdate --> RepoLookupUpdate[OnSliceRepository.findById]
+        RepoLookupUpdate -->|missing| NotFound[HTTP 404]
+        RepoLookupUpdate -->|found| PrepareUpdate[Upper-case strings,
+parse dates via DateUtils]
+        PrepareUpdate --> DateValid{Date parse ok?}
+        DateValid -- No --> ErrorUpdate[Status.ERROR, HTTP 500]
+        DateValid -- Yes --> RepoSaveUpdate[OnSliceRepository.save]
+        RepoSaveUpdate --> DtoUpdate[Return DTO, HTTP 200]
+    end
+
+    MapAll --> ClientResponse[(HTTP JSON response)]
+    MapId --> ClientResponse
+    MapSlice --> ClientResponse
+    MapGwid --> ClientResponse
+    DtoCreate --> ClientResponse
+    DtoUpdate --> ClientResponse
+    ErrorUpdate --> ClientResponse
+    NotFound --> ClientResponse

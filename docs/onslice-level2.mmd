@@ -1,0 +1,37 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnSliceController\nGET variants]
+    Controller --> Route{Which endpoint?}
+    Route -- /all --> ServiceAll[OnSliceService.findAll]
+    Route -- /byid/{id} --> ServiceById[OnSliceService.findById]
+    Route -- /byslice/{slice} --> ServiceBySlice[OnSliceService.findBySlice]
+    Route -- /byglobalwaferid/{globalWaferId} --> ServiceByGlobal[OnSliceService.findByGlobalWaferId]
+
+    ServiceAll --> RepoAll[OnSliceRepository.findAll]
+    ServiceById --> RepoById[OnSliceRepository.findById]
+    ServiceBySlice --> NormalizeSlice[Uppercase slice]
+    NormalizeSlice --> RepoBySlice[OnSliceRepository.findBySlice]
+    ServiceByGlobal --> NormalizeGlobal[Uppercase globalWaferId]
+    NormalizeGlobal --> RepoByGlobal[OnSliceRepository.findByGlobalWaferId]
+
+    RepoAll --> MapAll[Map each OnSlice to DTO]
+    RepoById --> MapId{Record found?}
+    RepoBySlice --> MapSlice{Record found?}
+    RepoByGlobal --> MapGlobal{Record found?}
+
+    MapAll --> RespondAll[Return list DTOs]
+    MapId -- Yes --> RespondId[Return DTO Status.FOUND]
+    MapId -- No --> NoDataId[Return DTO Status.NO_DATA]
+    MapSlice -- Yes --> RespondSlice[Return DTO Status.FOUND]
+    MapSlice -- No --> NoDataSlice[Return DTO Status.NO_DATA]
+    MapGlobal -- Yes --> RespondGlobal[Return DTO Status.FOUND]
+    MapGlobal -- No --> NoDataGlobal[Return DTO Status.NO_DATA]
+
+    RespondAll --> ControllerReturn[Controller writes HTTP 200]
+    RespondId --> ControllerReturn
+    NoDataId --> ControllerReturn
+    RespondSlice --> ControllerReturn
+    NoDataSlice --> ControllerReturn
+    RespondGlobal --> ControllerReturn
+    NoDataGlobal --> ControllerReturn
+
+    ControllerReturn --> ClientResponse[(HTTP 200 JSON)]

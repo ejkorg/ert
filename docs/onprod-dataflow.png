@@ -1,0 +1,9 @@
+Error 400: SyntaxError: Parse error on line 20:
+...ntService.getMesDto(JDBC using ON_SITE_
+----------------------^
+Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDEREND', 'DIAMOND_STOP', 'TAGEND', 'TRAPEND', 'INVTRAPEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PS'
+Error: Syntax error in graph
+    at Worker.convert (file:///usr/local/kroki/src/worker.js:44:15)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:453:9)
+    at async file:///usr/local/kroki/src/index.js:31:28

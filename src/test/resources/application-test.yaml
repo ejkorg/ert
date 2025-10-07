@@ -1,0 +1,31 @@
+# LOCAL configuration
+
+spring:
+  datasource:
+    jdbcUrl: jdbc:h2:mem:ReferenceTablesDb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  h2:
+    console:
+      enabled: true
+  sql:
+    init:
+      mode: always
+      platform: h2
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+lotg:
+  datasource:
+    jdbcUrl: jdbc:h2:mem:ReferenceTablesDb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+datawarehouse:
+  datasource:
+    jdbcUrl: jdbc:h2:mem:ReferenceTablesDb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password

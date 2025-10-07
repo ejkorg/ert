@@ -1,0 +1,108 @@
+flowchart LR
+    Client[(API Consumers)]
+
+    subgraph Controllers
+        OnLotCtrl[OnLotController\n/api/onlot]
+        OnProdCtrl[OnProdController\n/api/onprod]
+        OnScribeCtrl[OnScribeController\n/api/onscribe]
+        OnSliceCtrl[OnSliceController\n/api/onslice]
+        OnWmapCtrl[OnWmapController\n/api/onwmap]
+    end
+
+    Client --> OnLotCtrl
+    Client --> OnProdCtrl
+    Client --> OnScribeCtrl
+    Client --> OnSliceCtrl
+    Client --> OnWmapCtrl
+
+    subgraph Spring Boot Services
+        OnLotSvc[OnLotService]
+        OnProdSvc[OnProdService]
+        OnScribeSvc[OnScribeService]
+        OnSliceSvc[OnSliceService]
+        OnWmapSvc[OnWmapService]
+        DataWarehouseSvc[DataWarehouseService]
+        TorrentSvc[TorrentService]
+        GenesisSvc[GenesisService]
+        FabConfSvc[OnFabConfService]
+        SiteConfSvc[OnSiteConfService]
+        ErtConfSvc[ErtConfService]
+        CallerHelper[Caller helper]
+        AttributeUtils[AttributeUtils]
+    end
+
+    OnLotCtrl --> OnLotSvc
+    OnProdCtrl --> OnProdSvc
+    OnScribeCtrl --> OnScribeSvc
+    OnSliceCtrl --> OnSliceSvc
+    OnWmapCtrl --> OnWmapSvc
+
+    subgraph Persistence (Oracle/H2)
+        OnLotRepo[(OnLotRepository)]
+        OnProdRepo[(OnProdRepository)]
+        OnScribeRepo[(OnScribeRepository)]
+        OnSliceRepo[(OnSliceRepository)]
+        OnWmapRepo[(OnWmapRepository)]
+    end
+
+    OnLotSvc --> OnLotRepo
+    OnProdSvc --> OnProdRepo
+    OnScribeSvc --> OnScribeRepo
+    OnSliceSvc --> OnSliceRepo
+    OnWmapSvc --> OnWmapRepo
+
+    subgraph External Systems
+        LotgDb[(LotG Database)]
+        LotgWs[(LotG Web Service)]
+        LtmWs[(LTM Web Service)]
+        DwSys[(Data Warehouse / PLM)]
+        TorrentMes[(Torrent MES)]
+        GenesisMes[(Genesis MES)]
+        VidScribe[(VID↔SCRIBE Services)]
+    end
+
+    OnLotSvc --> LotgDb
+    OnLotSvc --> LotgWs
+    OnLotSvc --> LtmWs
+    OnLotSvc --> DwSys
+    OnLotSvc --> TorrentMes
+    OnLotSvc --> GenesisMes
+
+    OnProdSvc --> DwSys
+    OnProdSvc --> TorrentMes
+    OnProdSvc --> GenesisMes
+    OnProdSvc --> OnLotSvc
+
+    OnScribeSvc --> VidScribe
+    OnScribeSvc -.-> OnLotSvc
+    OnWmapSvc -.-> OnLotSvc
+    OnWmapSvc -.-> OnProdSvc
+
+    OnLotSvc --> FabConfSvc
+    OnLotSvc --> SiteConfSvc
+    OnLotSvc --> ErtConfSvc
+    OnLotSvc --> CallerHelper
+    OnLotSvc --> AttributeUtils
+
+    OnProdSvc --> FabConfSvc
+    OnProdSvc --> SiteConfSvc
+    OnProdSvc --> ErtConfSvc
+    OnProdSvc --> CallerHelper
+
+    OnScribeSvc --> FabConfSvc
+    OnScribeSvc --> ErtConfSvc
+    OnScribeSvc --> CallerHelper
+    OnScribeSvc --> AttributeUtils
+
+    OnSliceSvc --> ErtConfSvc
+
+    TorrentSvc --> TorrentMes
+    GenesisSvc --> GenesisMes
+    DataWarehouseSvc --> DwSys
+    CallerHelper --> LotgWs
+    CallerHelper --> LtmWs
+    CallerHelper --> VidScribe
+
+    FabConfSvc --> OnFabConfRepo[(ON_FAB_CONF table)]
+    SiteConfSvc --> OnSiteConfRepo[(ON_SITE_CONF table)]
+    ErtConfSvc --> ErtConfRepo[(ERT_CONF table)]

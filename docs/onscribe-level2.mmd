@@ -1,0 +1,29 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnScribeController\nGET /api/onscribe/bylotidandwafernum]
+    Controller --> Normalize[Normalize inputs\nuppercase lotId/fab/dataType]
+    Normalize --> Service[OnScribeService.findByLotAndWaferNum]
+    Service --> RepoCheck[OnScribeRepository.findByLotAndWaferNum]
+    RepoCheck -- Found & Status.FOUND_ALL --> Map[Build OnScribeDto\nStatus.FOUND]
+
+    RepoCheck -- Missing or incomplete --> Init[Instantiate OnScribe entity]
+    Init --> Config[Resolve fab rules\nOnFabConfService / ErtConfService]
+    Config --> DetermineLot[Decide lotId source\n(Lot vs MfgLot based on LotIdForOnScribeType)]
+    DetermineLot --> CallerFetch[Caller.getWaferIdByLotAndWaferNum]
+    Config --> Pattern[Load waferIdCreationPattern]
+    Config --> VidUrl[Resolve VID→SCRIBE URL\n+ ScribeResultType]
+    VidUrl --> CallerFetch
+
+    CallerFetch -->|WaferId payload| WaferFound{WaferId returned?}
+    WaferFound -- Yes --> LoadLot[OnLotService.findByLotId(... onlyFromDb=true)]
+    LoadLot --> Merge[caller.fillOnScribeByWaferIdResults]
+    Merge --> Persist[OnScribeRepository.save]
+
+    WaferFound -- No --> Fallback[AttributeUtils.calculateWaferId\nwaferIdSource=CALCULATED]
+    Pattern --> Fallback
+    DetermineLot --> Fallback
+
+    Fallback --> Persist
+    Persist --> Map
+
+    Map --> ControllerResponse[Controller returns DTO]
+    ControllerResponse --> ClientResponse[(HTTP 200 JSON)]

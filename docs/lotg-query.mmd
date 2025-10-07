@@ -1,0 +1,21 @@
+flowchart TD
+    A[OnLotService.findByLotId] --> B{Missing local OnLot record?}
+    B -- Yes --> C[LotgInfoService.getLotGInfo]
+    C --> D[LotgInfoCustomRepository.findLotGInfo]
+    D --> E[Prepare lot variants
+lotId / no dot / zero / suffix stripped]
+    E --> F[Bind parameters on SQL_LOTG_QUERY (v48)]
+    F --> G[(Oracle lotg_owner schema)]
+    G --> H[CTE pipeline
+src_tgt_xref
+pc_item
+pc_bom
+orn_out_oracle_trak
+orn_receipts
+mfg_bank_to_stage]
+    H --> I[Tuple result]
+    I --> J[LotGInfo mapper
+set status/product/fab/etc.]
+    J --> K[Return LotGInfo]
+    K --> L[OnLotService merges data]
+    B -- No --> L

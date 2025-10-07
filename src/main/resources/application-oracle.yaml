@@ -1,0 +1,16 @@
+# QA configuration
+
+spring:
+  datasource:
+    jndi-name: java:comp/env/jdbc/applicationDatasource
+
+lotg:
+  datasource:
+    jndi-name: java:comp/env/jdbc/lotgDatasource
+
+datawarehouse:
+  datasource:
+    jndi-name: java:comp/env/jdbc/datawarehouseDatasource
+
+ert:
+  log_conf_path: /apps/fecim/global/exensio-ref-tab-61050-tomcat9/conf/logback.xml

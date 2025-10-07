@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%d{yyyy-MM-dd_HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </layout>
+    </appender>
+
+    <appender name="MAIN_APPENDER_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder class="co.elastic.logging.logback.EcsEncoder">
+            <serviceName>ERT</serviceName>
+            <additionalField>
+                <key>service.environment</key>
+                <value>LOCAL</value>
+            </additionalField>
+            <additionalField>
+                <key>service.country</key>
+                <value>LOCAL</value>
+            </additionalField>
+            <additionalField>
+                <key>service.name</key>
+                <value>ERT</value>
+            </additionalField>
+        </encoder>
+        <!-- If it is necessary to not log the same level to normal log and to JSON log, this configuration can be used -->
+        <!-- Filter to log only ERROR level -->
+<!--            <filter class="ch.qos.logback.classic.filter.LevelFilter">-->
+<!--                <level>ERROR</level>-->
+<!--                <onMatch>ACCEPT</onMatch>-->
+<!--                <onMismatch>DENY</onMismatch>-->
+<!--            </filter>-->
+        <File>.\logs\json\ert.json</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>.\logs\json\archive\ert.%d{yy-MM-dd}.json.gz</FileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <logger name="com.onsemi.cim.apps" level="TRACE"/>
+
+    <logger name="com.zaxxer.hikari.HikariConfig" level="DEBUG"/>
+    <logger name="com.zaxxer.hikari" level="TRACE"/>
+
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="MAIN_APPENDER_JSON"/>
+    </root>
+</configuration>

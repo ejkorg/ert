@@ -198,6 +198,25 @@ def build():
     prs = Presentation()
     add_title_slide(prs)
 
+    # Legend slide for acronyms and precedence notation
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = 'Legend: acronyms and precedence'
+    body = slide.shapes.add_textbox(Inches(0.6), Inches(1.5), Inches(11.5), Inches(5.0))
+    tf = body.text_frame
+    tf.word_wrap = True
+    tf.text = 'Acronyms:'
+    p = tf.add_paragraph(); p.text = 'LotG = Legacy genealogy DB (native SQL) and LotG Web Service'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'LTM = Lot Type Management Web Service'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'DW = Data Warehouse (PLM/MfgArea lookups)'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'MES = Manufacturing Execution System (Torrent/Genesis)'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'WMC = Wafer Map Configuration service; Matchup = lot/scribe→config'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'VID/SCRIBE = Wafer ID ↔ Laser Scribe web services'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'eCofA = Epi/raw silicon data provider used in slice genealogy'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'REFDB = Local Exensio reference tables (ON_LOT, ON_PROD, ON_SCRIBE, ON_SLICE, ON_WMAP)'; p.level = 1
+    p = tf.add_paragraph(); p.text = 'PP_LOTPROD = Internal table/endpoint for lot→product/fab'; p.level = 1
+    p = tf.add_paragraph(); p.text = ''; p.level = 1
+    p = tf.add_paragraph(); p.text = 'Precedence notation: A > B > C means A overwrites B overwrites C when present'; p.level = 0
+
     # Endpoint slides
     for name, img in IMAGES.items():
         add_endpoint_slide(prs, name, BULLETS[name], img)

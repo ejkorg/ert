@@ -9,6 +9,8 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import PP_PARAGRAPH_ALIGNMENT
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
@@ -60,6 +62,46 @@ BULLETS = {
 
 TITLE = 'Exensio REFDB endpoints — data sources to final tables'
 SUB = 'Focus: ON_LOT, ON_PROD, ON_SCRIBE, ON_SLICE, ON_WMAP (+ PP_LOTPROD context)'
+
+# Closing mapping: endpoint → final tables → key columns → primary sources
+MAPPING = [
+    (
+        'OnLot',
+        'ON_LOT; ON_PROD',
+        'lot, mfgLot, product, fab, sourceLot, lotType, maskSet, process, technology, PTI, family',
+        'LotG (native+WS), LTM WS (lotType), Data Warehouse (PLM/MfgArea), MES (Torrent/Genesis)'
+    ),
+    (
+        'OnProd',
+        'ON_PROD',
+        'product, productVersion, family, process, technology, maskSet, fab',
+        'MES (Torrent/Genesis), Data Warehouse PLM/MfgArea, LotG'
+    ),
+    (
+        'OnScribe',
+        'ON_SCRIBE',
+        'lot, waferNum, waferId, scribeId, insertTime, status',
+        'VID↔SCRIBE services (fab-configured); calculated fallback via AttributeUtils; OnLot cache for sourceLot context'
+    ),
+    (
+        'OnSlice',
+        'ON_SLICE',
+        'slice, globalWaferId, puckId, runId, sliceSourceLot, startLot, fabWaferId, fabSourceLot, slicePartname, sliceLottype, sliceSupplierId, puckHeight, sliceOrder, sliceStartTime',
+        'Primary writes via admin DTO/API; upstream ingestion uses BIWMES+eCofA+TORRENT to populate/maintain rows'
+    ),
+    (
+        'OnWmap',
+        'ON_WMAP',
+        'idWaferMapConfiguration, product/device mapping, metadata per WMC',
+        'Matchup service (by lot/scribe) and WMC service (by config/product) via Caller'
+    ),
+    (
+        'PP_LOTPROD (context)',
+        'PP_LOTPROD',
+        'lot, product, fab (frontend provenance)',
+        'Internal PP_LOTPROD DB exposed via /api/pplotprod/bylotid; consumed by ingestion scripts'
+    ),
+]
 
 
 def add_title_slide(prs):
@@ -122,6 +164,30 @@ def build():
     p = tf.add_paragraph(); p.text = 'Source: internal PP_LOTPROD table via Exensio WS endpoint'; p.level = 1
     p = tf.add_paragraph(); p.text = 'Consumers: getCamstarWafer2AssemblyGenealogy.pl, getSnowflakeE142ModuleTrace.pl'; p.level = 1
     p = tf.add_paragraph(); p.text = 'Outputs: lot→product/fab context feeding ON_LOT/ON_PROD usage'; p.level = 1
+
+    # Closing mapping slide (Endpoint → REFDB mapping)
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = 'Endpoint → REFDB tables, columns, and sources'
+    rows = 1 + len(MAPPING)
+    cols = 4
+    left, top, width, height = Inches(0.3), Inches(1.3), Inches(12.9), Inches(5.2)
+    table = slide.shapes.add_table(rows, cols, left, top, width, height).table
+    # Set headers
+    headers = ['Endpoint', 'Final REFDB table(s)', 'Key columns populated', 'Primary sources']
+    for j, h in enumerate(headers):
+        cell = table.cell(0, j)
+        cell.text = h
+        cell.text_frame.paragraphs[0].font.bold = True
+        cell.text_frame.paragraphs[0].font.size = Pt(14)
+    # Fill rows
+    for i, (ep, tabs, cols_txt, srcs) in enumerate(MAPPING, start=1):
+        table.cell(i, 0).text = ep
+        table.cell(i, 1).text = tabs
+        table.cell(i, 2).text = cols_txt
+        table.cell(i, 3).text = srcs
+        for j in range(4):
+            for p in table.cell(i, j).text_frame.paragraphs:
+                p.font.size = Pt(12)
 
     prs.save(str(OUT))
     return OUT

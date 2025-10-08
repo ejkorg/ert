@@ -1,0 +1,85 @@
+flowchart TB
+
+%% SiC Wafer Trace: fab-to-slice and epi-to-slice genealogy builder
+%% Source script: refb_ingest/on_SiCwaferTrace.pl
+
+classDef db fill:#eef,stroke:#468,stroke-width:1px
+classDef file fill:#efe,stroke:#484,stroke-width:1px
+classDef io fill:#ffd,stroke:#aa6,stroke-width:1px
+classDef proc fill:#f6f6f6,stroke:#666,stroke-width:1px
+classDef pub fill:#e8f7ff,stroke:#07c,stroke-width:1px
+
+start([Start])
+
+subgraph Inputs
+  direction TB
+  opt["CLI options\n--out dir, --ecoaschema, --start, --end\n--meepifile, --usearchive, --archivedir\n--deletesfile, --slicelist, --lotlist"]
+  env["Env vars\nREFDB_TNS, ECOA_TNS\nREFDB_USER, REFDB_PASS\nECOA_USER, ECOA_PASS\nYMS_PASSWORD"]
+  files["Aux files\nMEEPIFILE CSV: Maine epi attributes\nDELETESFILE CSV: lot attribute deletes"]
+end
+class opt,env,files io
+
+subgraph Connections
+  direction TB
+  biwmes[(BIWMES Oracle BIWPRD:YMS)]:::db
+  refdb[(REFDB Oracle $REFDB_TNS)]:::db
+  ecofa[(eCofA Oracle $ECOA_TNS\nschema: {ECOASCHEMA})]:::db
+  torrent[(TORRENT Oracle CZ4TRQA)]:::db
+end
+
+start --> opt --> env --> files --> init
+init["Parse options, validate required,\nensure out/tmp exists, load CSVs"]:::proc
+init --> biwmes
+init --> refdb
+init --> ecofa
+init --> torrent
+
+subgraph FabTrace[Fab trace: getEpiOrFabTraceSQL 'fab']
+  direction TB
+  q1["BIWMES query attrs/info\nMap slice to wafer from CRLT\nWindow by start..end or slicelist/lotlist\nIgnore COMETS purge deletes"]:::proc
+  adj1["Apply Maine overrides\nIf slice in MEEPIFILE: set UWB epi\nslot, lot, product, date from CSV"]:::proc
+  d1{UWB epi and deleted attr?}:::proc
+  e1["eCofA lookup by GWID or scribe\nGet GWID, PUCK_ID, raw and epi meta"]:::proc
+  cz1{No eCofA epi? Query TORRENT CZ2}:::proc
+  r1["Read REFDB.on_slice by slice or GWID\nMay remap slice when matched by GWID"]:::proc
+  chg["If CHANGED_WAFERS includes current\nON_SLICE fab wafer then allow replace"]:::proc
+  upd{Update ON_SLICE needed?\nSet fab_wafer_id, fab_source_lot, GWID,\nslice_order, lottype when missing}:::proc
+  outFab["Build outputs preferring REFDB then eCofA then NA\n- PUCK2FAB by puck\n- FAB2PUCK by source lot\n- EPI2PUCK from fab trace\nMap CZ2 raw supplier to GTAT"]:::proc
+end
+
+biwmes --> q1 --> adj1 --> d1
+ d1 -- No --> e1 --> cz1
+ d1 -- Yes --> outFab
+ cz1 -- No --> r1 --> chg --> upd --> outFab
+ cz1 -- Yes --> r1 --> chg --> upd --> outFab
+
+subgraph EpiTrace[Epi trace: three passes]
+  direction TB
+  i1["Iter1 BIWMES epi\ngetEpiOrFabTraceSQL 'epi'\nFacilities FBEPI, FM4045, BBLS\nBucheon vs internal routing"]:::proc
+  i2["Iter2 TORRENT CZ2 epi\ngetCZEpiSQL by time or slicelist"]:::proc
+  i3["Iter3 eCofA epi by date\nget_eCofA_sliceInfoByDate\nExclude CZ2 epi"]:::proc
+  adj2["Apply Maine overrides and skip\nUWB if deleted attr"]:::proc
+  e2["eCofA lookup per slice for GWID,\nPUCK_ID, raw and epi meta"]:::proc
+  r2["Read REFDB.on_slice, remap GWID to slice if needed"]:::proc
+  outEpi["Build EPI2PUCK by source lot\nDedup per source lot and slice\nBK epi supplier precedence: prefer eCofA when non UWB and available"]:::proc
+end
+
+biwmes --> i1 --> adj2 --> e2 --> r2 --> outEpi
+torrent --> i2 --> adj2
+ecofa --> i3 --> adj2
+
+subgraph Aggregation[Group and write]
+  direction TB
+  g1["Group PUCK2FAB by PUCK_ID into byFabPuck"]:::proc
+  g2["Group FAB2PUCK by SOURCE_LOT into byFabSourceLot"]:::proc
+  g3["Group EPI2PUCK by SOURCE_LOT into byEpiSourceLot"]:::proc
+  writeTmp["Write CSVs into out/tmp\nPUCK2FAB.*.p2f.csv\nFAB2PUCK.*.f2p.csv\nEPI2PUCK.*.e2p.csv"]:::file
+  publish["Copy to ARCHIVEDIR if set\nMove tmp files to OUT dir"]:::pub
+end
+
+outFab --> g1 --> writeTmp --> publish --> done((Done))
+outFab --> g2
+outEpi --> g3 --> writeTmp
+
+note1["Rules and details\n- Time window: start at 00:00 of start day, end at 23:59:59 of end day\n- Changed wafers: replace fab wafer when previous wafer listed in CHANGED_WAFERS\n- Guess GWID from slice when needed by stripping hyphen or truncating\n- RAW_SUPPLIERID 'CZ2' becomes 'GTAT'\n- CZ2 epi: prefer TORRENT, exclude from eCofA epi by date\n- Write NA strings for missing values\n- Output has 21 fields per record"]:::io
+Aggregation --> note1

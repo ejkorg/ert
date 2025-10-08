@@ -103,6 +103,54 @@ MAPPING = [
     ),
 ]
 
+# Per-column source precedence by endpoint
+PRECEDENCE = {
+    'OnLot': [
+        ('product', 'MES.product > DW.PLM.partId > LotG.waferPartAlternateProduct > request alternateProduct'),
+        ('fab', 'MES.fab > LotG.fab'),
+        ('sourceLot', 'LotG native SQL SOURCE_LOT > LotG WS > adjusted by ON_FAB_CONF.sourceLotAdjustmentPattern'),
+        ('mfgLot', 'LotG Web Service (foundry/fab lot) > existing (manual preserved)'),
+        ('lotType', 'LTM Web Service > MES > DW > LotG'),
+        ('maskSet', 'MES.maskSet > DW.PLM.MASK_SET'),
+        ('process', 'MES.process > DW'),
+        ('technology', 'MES.technology > DW'),
+        ('PTI', 'MES.PTI_CODE (if configured) > existing'),
+        ('family', 'MES.family > DW'),
+    ],
+    'OnProd': [
+        ('product', 'MES.product > DW.PLM.partId > LotG.waferPartAlternateProduct'),
+        ('productVersion', 'MES.productVersion > existing'),
+        ('family', 'MES.family > DW'),
+        ('process', 'MES.process > DW'),
+        ('technology', 'MES.technology > DW'),
+        ('maskSet', 'MES.maskSet > DW.PLM.MASK_SET'),
+        ('fab', 'MES.fab > DW/ LotG'),
+    ],
+    'OnScribe': [
+        ('waferId', 'VID→SCRIBE service success > AttributeUtils.calculateWaferId (fallback)'),
+        ('scribeId', 'VID payload laser-scribe; if onScribeWaferIdEqualsScribeId=true then waferId'),
+        ('lot', 'From request; production vs manufacturing chosen by OnFabConf.LotIdForOnScribeType'),
+        ('waferNum', 'From request (validated)'),
+        ('status', 'Computed: FOUND | NO_DATA | ERROR; MANUAL not overwritten'),
+        ('insertTime', 'Set on persist'),
+    ],
+    'OnSlice': [
+        ('globalWaferId', 'REFDB existing > eCofA.GWID > guessed from slice (strip dashes/truncate)'),
+        ('puckId', 'REFDB.PUCK_ID > derived from slice/vendor rules (non-GTAT → puck; GTAT → runId logic)'),
+        ('fabWaferId', 'MES CRLT fab-trace > replace only if missing or CHANGED_WAFERS indicates remap'),
+        ('fabSourceLot', 'MES CRLT source lot > write when missing'),
+        ('sliceOrder', 'REFDB.SLICE_ORDER > eCofA slice order'),
+        ('sliceLottype', 'fab-trace lot_type when missing > existing'),
+        ('slicePartname', 'REFDB.slice_partname > Maine EPI product > existing'),
+        ('sliceStartTime', 'REFDB; filled by ingestion when CZ2/eCofA/TORRENT supply'),
+    ],
+    'OnWmap': [
+        ('idWaferMapConfiguration', 'Matchup by lot/scribe when available > WMC by config/product'),
+        ('device/product mapping', 'WMC by device (serviceKey primary) > WMC by product (PCM fallback)'),
+        ('metadata', 'From WMC payload; cached in ON_WMAP'),
+    ],
+}
+
 
 def add_title_slide(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[0])
@@ -164,6 +212,29 @@ def build():
     p = tf.add_paragraph(); p.text = 'Source: internal PP_LOTPROD table via Exensio WS endpoint'; p.level = 1
     p = tf.add_paragraph(); p.text = 'Consumers: getCamstarWafer2AssemblyGenealogy.pl, getSnowflakeE142ModuleTrace.pl'; p.level = 1
     p = tf.add_paragraph(); p.text = 'Outputs: lot→product/fab context feeding ON_LOT/ON_PROD usage'; p.level = 1
+
+    # Per-column precedence slides per endpoint
+    def add_precedence_slide(prs, endpoint, items):
+        slide = prs.slides.add_slide(prs.slide_layouts[5])
+        slide.shapes.title.text = f"{endpoint}: per-column source precedence"
+        rows = 1 + len(items)
+        cols = 2
+        table = slide.shapes.add_table(rows, cols, Inches(0.5), Inches(1.3), Inches(12.5), Inches(5.0)).table
+        table.cell(0, 0).text = 'Column'
+        table.cell(0, 1).text = 'Source precedence'
+        for j in range(2):
+            p0 = table.cell(0, j).text_frame.paragraphs[0]
+            p0.font.bold = True
+            p0.font.size = Pt(14)
+        for i, (col, src) in enumerate(items, start=1):
+            table.cell(i, 0).text = col
+            table.cell(i, 1).text = src
+            for j in range(2):
+                for p in table.cell(i, j).text_frame.paragraphs:
+                    p.font.size = Pt(12)
+
+    for ep in ['OnLot', 'OnProd', 'OnScribe', 'OnSlice', 'OnWmap']:
+        add_precedence_slide(prs, ep, PRECEDENCE[ep])
 
     # Closing mapping slide (Endpoint → REFDB mapping)
     slide = prs.slides.add_slide(prs.slide_layouts[5])

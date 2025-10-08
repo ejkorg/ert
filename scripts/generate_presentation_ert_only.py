@@ -25,7 +25,9 @@ IMAGES = [
     'onlot-dataflow.png',
     'onprod-dataflow.png',
     'onscribe-dataflow.png',
-    'onslice-dataflow.png'
+    'onslice-dataflow.png',
+    'onwmap-level2-config.png',  # place WMAP after Slice
+    'onwmap-level2-product.png'
 ]
 
 prs = Presentation()
@@ -72,7 +74,7 @@ def md_to_blocks(path):
             bullets.append(t)
     return header or os.path.basename(path), bullets
 
-agenda = ["Title & Context", "Key flows: OnLot / OnProd / OnScribe / OnSlice", "Integration overview", "Operational notes"]
+agenda = ["Title & Context", "Key flows: OnLot / OnProd / OnScribe / OnSlice / OnWmap", "Integration overview", "Operational notes"]
 add_bullet_slide('Agenda', agenda)
 
 for fn in FILES:

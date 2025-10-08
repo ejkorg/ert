@@ -17,7 +17,8 @@ FILES = [
     ('OnLot', 'onlot-dataflow.md'),
     ('OnProd', 'onprod-dataflow.md'),
     ('OnScribe', 'onscribe-dataflow.md'),
-    ('OnSlice', 'onslice-dataflow.md')
+    ('OnSlice', 'onslice-dataflow.md'),
+    ('OnWmap', 'onwmap-level2.mmd')
 ]
 
 IMAGES = [
@@ -25,7 +26,9 @@ IMAGES = [
     'onlot-dataflow.png',
     'onprod-dataflow.png',
     'onscribe-dataflow.png',
-    'onslice-dataflow.png'
+    'onslice-dataflow.png',
+    'onwmap-level2-config.png',
+    'onwmap-level2-product.png'
 ]
 
 prs = Presentation()

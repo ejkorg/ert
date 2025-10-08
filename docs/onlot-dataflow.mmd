@@ -6,7 +6,7 @@ flowchart TD
 
     %% Repository checkpoint
     Service --> RepoFind[OnLotRepository.findByLot]
-    RepoFind -- hit && status complete --> ReturnCached[Map entity ➜ OnLotDto]
+    RepoFind -- hit && status complete --> ReturnCached[Map entity -> OnLotDto]
     ReturnCached --> Respond[(HTTP 200 JSON)]
 
     %% Enrichment path
@@ -17,22 +17,21 @@ flowchart TD
 
     %% LotG native DB
     FabConf --> LotgNative[LotgInfoService.getLotGInfo]
-    SiteConf --> LotTrim[Apply LotTrimRule (optional)]
+    SiteConf --> LotTrim[Apply LotTrimRule optional]
     LotTrim --> LotgNative
     LotgNative --> Merge
 
     %% Second LotG heuristics
-    FabConf --> SecondLotg{secondLotgQuery?
-(JND/Bucheon rules)}
+    FabConf --> SecondLotg{secondLotgQuery JND or Bucheon rules}
     SecondLotg --> LotgNative
 
     %% LotG WS (manufacturing lot)
-    ErtConf --> LotgWS[Caller.getLotg (WS_LOTG_URL)]
+    ErtConf --> LotgWS[Caller.getLotg WS_LOTG_URL]
     FabConf --> LotgWS
     LotgWS --> Merge
 
     %% LTM Web Service
-    FabConf --> LtmWS[Caller.getLtm (ltmUrl / lotidForLTM)]
+    FabConf --> LtmWS[Caller.getLtm ltmUrl or lotidForLTM]
     LtmWS --> Merge
 
     %% Data Warehouse
@@ -51,8 +50,8 @@ flowchart TD
     SkipMes --> Merge
 
     %% Merge & persistence
-    Merge --> AdjustSourceLot[Apply sourceLotAdjustmentPattern (clone only)]
-    AdjustSourceLot --> Statuses[setStatuses ➜ Status enum]
+    Merge --> AdjustSourceLot[Apply sourceLotAdjustmentPattern clone only]
+    AdjustSourceLot --> Statuses[setStatuses to Status enum]
     Statuses --> Persist{Can persist?}
     Persist -- yes --> SaveLot[OnLotRepository.save]
     Persist -- yes --> SaveProd[OnProdRepository.save]

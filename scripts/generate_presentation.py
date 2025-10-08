@@ -28,7 +28,9 @@ IMAGES = [
     'onlot-dataflow.png',
     'onprod-dataflow.png',
     'onscribe-dataflow.png',
-    'onslice-dataflow.png'
+    'onslice-dataflow.png',
+    'onwmap-level2-config.png',  # immediately after Slice
+    'onwmap-level2-product.png'
 ]
 
 prs = Presentation()
@@ -83,7 +85,7 @@ def md_to_blocks(path):
     return header or os.path.basename(path), bullets
 
 # Add agenda slide
-agenda = ["Title & Context", "Current-state snapshot", "Key flows: OnLot / OnProd / OnScribe / OnSlice", "Integration landscape", "Databricks migration plan", "Next steps"]
+agenda = ["Title & Context", "Current-state snapshot", "Key flows: OnLot / OnProd / OnScribe / OnSlice / OnWmap", "Integration landscape", "Databricks migration plan", "Next steps"]
 add_bullet_slide("Agenda", agenda)
 
 # Add slides from files

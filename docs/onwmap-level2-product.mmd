@@ -1,0 +1,19 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnWmapController GET onwmap product path]
+    Controller --> Normalize[Uppercase keys serviceKey product searchedLotPart fab dataType]
+    Normalize --> ServiceProd[OnWmapService.findByProduct]
+    ServiceProd --> RepoProd[OnWmapRepository.findByProduct]
+    RepoProd -- Found & complete --> MapFoundProd[Map cached OnWmap]
+    RepoProd -- Missing --> WmcUrlProd[Resolve WMC URL from OnFabConf or ErtConf]
+    WmcUrlProd --> CallerPrimary[Caller.getWmcByDevice using serviceKey]
+    CallerPrimary --> PrimaryFound{WMC result?}
+    PrimaryFound -- No --> CallerSecondary[Caller.getWmcByDevice using product with PCM fallback]
+    CallerSecondary --> SecondaryFound{WMC result?}
+    SecondaryFound -- No --> NoData[Return DTO Status.NO_DATA]
+    SecondaryFound -- Yes --> AggregateProd[caller.assignWmcResults]
+    PrimaryFound -- Yes --> AggregateProd
+    AggregateProd --> PersistProd[OnWmapRepository.save]
+    PersistProd --> MapFoundProd
+    MapFoundProd --> ControllerResponse[Controller builds HTTP 200]
+    NoData --> ControllerResponse
+    ControllerResponse --> ClientResponse[(HTTP 200 JSON)]

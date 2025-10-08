@@ -1,17 +1,17 @@
 flowchart TD
-    Client[(API Consumer)] --> Controller[OnLotController\nGET /api/onlot/bylotid]
-    Controller --> Normalize[Normalize inputs\n(StringUtils.upperCase)]
+    Client[(API Consumer)] --> Controller[OnLotController GET /api/onlot/bylotid]
+    Controller --> Normalize[Normalize inputs StringUtils upperCase]
     Normalize --> Service[OnLotService.findByLotId]
     Service --> RepoOnLot[OnLotRepository.findByLot]
-    RepoOnLot -- Found --> Map[Map entity to OnLotDto\nset Status.FOUND]
+    RepoOnLot -- Found --> Map[Map entity to OnLotDto; set Status FOUND]
     Map --> ControllerResponse[Controller builds ResponseEntity]
 
     ControllerResponse --> ClientResponse[(HTTP 200 + JSON DTO)]
 
-    RepoOnLot -- Not Found --> Config[Load configs\nOnFabConf / ErtConf / OnSiteConf]
+    RepoOnLot -- Not Found --> Config[Load configs: OnFabConf, ErtConf, OnSiteConf]
     Config --> Lotg[LotgInfoService.getLotGInfo]
     Config --> Ltm[Caller.getLtm]
-    Config --> Mes[TorrentService / GenesisService]
+    Config --> Mes[TorrentService and GenesisService]
     Config --> Dw[DataWarehouseService queries]
     Config --> SiteRules[OnSiteConfRepository rules]
 
@@ -21,6 +21,6 @@ flowchart TD
     Dw --> Aggregate
     SiteRules --> Aggregate
 
-    Aggregate --> Persist[Persist updates\nOnLotRepository.save\nOnProdRepository.save]
+    Aggregate --> Persist[Persist updates: OnLotRepository.save; OnProdRepository.save]
     Persist --> Map
     Map --> ControllerResponse

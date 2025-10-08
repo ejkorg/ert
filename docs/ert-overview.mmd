@@ -2,11 +2,11 @@ flowchart LR
     Client[(API Consumers)]
 
     subgraph Controllers
-        OnLotCtrl[OnLotController\n/api/onlot]
-        OnProdCtrl[OnProdController\n/api/onprod]
-        OnScribeCtrl[OnScribeController\n/api/onscribe]
-        OnSliceCtrl[OnSliceController\n/api/onslice]
-        OnWmapCtrl[OnWmapController\n/api/onwmap]
+        OnLotCtrl[OnLotController /api/onlot]
+        OnProdCtrl[OnProdController /api/onprod]
+        OnScribeCtrl[OnScribeController /api/onscribe]
+        OnSliceCtrl[OnSliceController /api/onslice]
+        OnWmapCtrl[OnWmapController /api/onwmap]
     end
 
     Client --> OnLotCtrl
@@ -37,12 +37,13 @@ flowchart LR
     OnSliceCtrl --> OnSliceSvc
     OnWmapCtrl --> OnWmapSvc
 
-    subgraph Persistence (Oracle/H2)
+    subgraph Persistence
         OnLotRepo[(OnLotRepository)]
         OnProdRepo[(OnProdRepository)]
         OnScribeRepo[(OnScribeRepository)]
         OnSliceRepo[(OnSliceRepository)]
         OnWmapRepo[(OnWmapRepository)]
+        NotePersistence["Oracle/H2"]
     end
 
     OnLotSvc --> OnLotRepo
@@ -58,7 +59,7 @@ flowchart LR
         DwSys[(Data Warehouse / PLM)]
         TorrentMes[(Torrent MES)]
         GenesisMes[(Genesis MES)]
-        VidScribe[(VID↔SCRIBE Services)]
+        VidScribe[(VID<->SCRIBE Services)]
     end
 
     OnLotSvc --> LotgDb

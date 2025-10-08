@@ -1,0 +1,22 @@
+flowchart TD
+    Client[(API Consumer)] --> Controller[OnWmapController GET onwmap config path]
+    Controller --> Normalize[Uppercase keys serviceKey product searchedLotPart fab dataType]
+    Normalize --> ResolveFab[OnFabConfService.getByFabAndDataTypeOrFabOnly]
+    ResolveFab --> HasMatchup{Matchup URL present?}
+
+    HasMatchup -- Yes --> MatchupCall[MatchupLoader.loadMatchupByLotScribeEndDate]
+    MatchupCall --> MatchupResult{Matchup status FOUND?}
+    MatchupResult -- Yes --> UseCfgId[Extract idWaferMapConfiguration]
+    UseCfgId --> ServiceCfg[OnWmapService.findByCfgId]
+    ServiceCfg --> RepoCfg[OnWmapRepository.findByCfgId]
+    RepoCfg -- Found & complete --> MapFoundCfg[Map cached OnWmap]
+    RepoCfg -- Missing --> WmcUrlCfg[Resolve WMC URL from OnFabConf or ErtConf]
+    WmcUrlCfg --> CallerCfg[Caller.getWmcByWmcId]
+    CallerCfg --> AggregateCfg[caller.assignWmcResults]
+    AggregateCfg --> PersistCfg[OnWmapRepository.save]
+    PersistCfg --> MapFoundCfg
+
+    MatchupResult -- No --> FallbackService[Invoke Service path]
+    MapFoundCfg --> ControllerResponse[Controller builds HTTP 200]
+    FallbackService --> ControllerResponse
+    ControllerResponse --> ClientResponse[(HTTP 200 JSON)]

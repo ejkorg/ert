@@ -1,24 +1,24 @@
 flowchart TD
-    Client[(API Consumer)] --> Controller[OnScribeController\nGET /api/onscribe/bylotidandwafernum]
-    Controller --> Normalize[Normalize inputs\nuppercase lotId/fab/dataType]
+    Client[(API Consumer)] --> Controller[OnScribeController GET /api/onscribe/bylotidandwafernum]
+    Controller --> Normalize[Normalize inputs uppercase lotId fab dataType]
     Normalize --> Service[OnScribeService.findByLotAndWaferNum]
     Service --> RepoCheck[OnScribeRepository.findByLotAndWaferNum]
-    RepoCheck -- Found & Status.FOUND_ALL --> Map[Build OnScribeDto\nStatus.FOUND]
+    RepoCheck -- Found & Status.FOUND_ALL --> Map[Build OnScribeDto Status.FOUND]
 
     RepoCheck -- Missing or incomplete --> Init[Instantiate OnScribe entity]
-    Init --> Config[Resolve fab rules\nOnFabConfService / ErtConfService]
-    Config --> DetermineLot[Decide lotId source\n(Lot vs MfgLot based on LotIdForOnScribeType)]
+    Init --> Config[Resolve fab rules OnFabConfService / ErtConfService]
+    Config --> DetermineLot[Decide lotId source: Lot or MfgLot based on LotIdForOnScribeType]
     DetermineLot --> CallerFetch[Caller.getWaferIdByLotAndWaferNum]
     Config --> Pattern[Load waferIdCreationPattern]
-    Config --> VidUrl[Resolve VID→SCRIBE URL\n+ ScribeResultType]
+    Config --> VidUrl[Resolve VID->SCRIBE URL + ScribeResultType]
     VidUrl --> CallerFetch
 
     CallerFetch -->|WaferId payload| WaferFound{WaferId returned?}
-    WaferFound -- Yes --> LoadLot[OnLotService.findByLotId(... onlyFromDb=true)]
+    WaferFound -- Yes --> LoadLot[OnLotService.findByLotId onlyFromDb true]
     LoadLot --> Merge[caller.fillOnScribeByWaferIdResults]
     Merge --> Persist[OnScribeRepository.save]
 
-    WaferFound -- No --> Fallback[AttributeUtils.calculateWaferId\nwaferIdSource=CALCULATED]
+    WaferFound -- No --> Fallback[AttributeUtils.calculateWaferId; waferIdSource CALCULATED]
     Pattern --> Fallback
     DetermineLot --> Fallback
 

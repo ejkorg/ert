@@ -1,0 +1,9 @@
+# Ignore mermaid backup and sanitizer artifacts
+*.mmd.bak*
+*.sanitized
+
+# Ignore render error outputs
+*.error.txt
+
+# Do not track local archive folder
+archive/

@@ -19,8 +19,7 @@ flowchart TD
         Orchestrate --> MesConfig[OnSiteConfRepository.getBySite]
 
         MesConfig --> MesType{mesType}
-        MesType -- TORRENT --> Torrent[TorrentService.getMesDto
-(JDBC using ON_SITE_CONF credentials)]
+    MesType -- TORRENT --> Torrent[TorrentService.getMesDto using ON_SITE_CONF credentials]
         MesType -- GENESIS --> Genesis[GenesisService.getMesDto]
         MesType -- other/none --> SkipMes[Skip MES fetch]
 
@@ -28,8 +27,7 @@ flowchart TD
         Genesis --> MesDto
         SkipMes --> Merge
 
-        Lotg --> Merge[Caller.merge results
-LotG + DW + MES]
+    Lotg --> Merge[Caller.merge results: LotG + DW + MES]
         Dw --> Merge
         MesDto --> Merge
 

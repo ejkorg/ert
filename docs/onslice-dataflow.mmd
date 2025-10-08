@@ -1,13 +1,12 @@
 flowchart TD
-    Client[(API Consumer)] --> Controller[OnSliceController
-/api/onslice/*]
+    Client[(API Consumer)] --> Controller[OnSliceController /api/onslice/*]
 
     Controller -->|GET /all| ServiceAll[OnSliceService.findAll]
-    Controller -->|GET /byid/{id}| ServiceById[OnSliceService.findById]
-    Controller -->|GET /byslice/{slice}| ServiceBySlice[OnSliceService.findBySlice]
-    Controller -->|GET /byglobalwaferid/{gwid}| ServiceByGwid[OnSliceService.findByGlobalWaferId]
+    Controller -->|GET /byid id| ServiceById[OnSliceService.findById]
+    Controller -->|GET /byslice slice| ServiceBySlice[OnSliceService.findBySlice]
+    Controller -->|GET /byglobalwaferid gwid| ServiceByGwid[OnSliceService.findByGlobalWaferId]
     Controller -->|POST /create| ServiceCreate[OnSliceService.createFromDto]
-    Controller -->|PUT /update/{id}| ServiceUpdate[OnSliceService.updateFromDto]
+    Controller -->|PUT /update id| ServiceUpdate[OnSliceService.updateFromDto]
 
     subgraph Reads
         ServiceAll --> RepoAll[OnSliceRepository.findAll]
@@ -31,8 +30,7 @@ flowchart TD
     subgraph Update
         ServiceUpdate --> RepoLookupUpdate[OnSliceRepository.findById]
         RepoLookupUpdate -->|missing| NotFound[HTTP 404]
-        RepoLookupUpdate -->|found| PrepareUpdate[Upper-case strings,
-parse dates via DateUtils]
+    RepoLookupUpdate -->|found| PrepareUpdate[Upper-case strings parse dates via DateUtils]
         PrepareUpdate --> DateValid{Date parse ok?}
         DateValid -- No --> ErrorUpdate[Status.ERROR, HTTP 500]
         DateValid -- Yes --> RepoSaveUpdate[OnSliceRepository.save]

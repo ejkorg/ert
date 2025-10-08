@@ -1,0 +1,68 @@
+%% DW Product Metadata Extraction Flow
+%% Source refb_ingest/getDWProductMetadata.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason provide product reference data for ERT]
+  IT[Intention build product dimension info from DW]
+
+  INP[Inputs db user and password and sid and product like and optional add mtp wafer suffix]
+  ENV[Env REFERENCE_DATA_DIR must exist]
+  VARGS{Args count is 4 or 5}
+  VPW{Password token DW_PASSWORD or actual}
+  UX[[Exit with usage]]
+
+  PMAP{Map product like bucket}
+  P0[productLike0to9 to regex for digits]
+  P1[productLikeAtoM to regex A to M]
+  P2[productLikeNtoZ to regex N to Z]
+  PERR[[Invalid product like value exit]]
+
+  OPT{Optional flag add mtp wafer suffix}
+  WAF[Append wafer suffix case to product when flag set]
+
+  CONN{SID is DWPRD}
+  CONN1[Use DWPRD alias connection]
+  CONN2[Use host port service connection]
+
+  MKSQL[Write SQL script to temp]
+  RUN[Run sqlplus with script]
+  SPOOL[Spool rows to tmp file]
+  ARCH[Copy tmp to archive and gzip]
+  MOVE[Move tmp to final output]
+  CLEAN[Remove temporary SQL script]
+  ENDN([End])
+
+  T1[ONE dot PC_ITEM]
+  T2[BIWMARTS dot PART_DIM]
+  T3[BIWHUB dot SUPPLY_PATH_WHERE_USED]
+  T4[STG_PRODCENT dot PART]
+  T5[BIWMARTS dot SITE_DIM]
+
+  DATA[Data extracted product and item type and fab and fab desc and afm and process and family and package and gdpw and wafer units and wafer size and die units and die width and die height and last changed date]
+  OUTS[Outputs DWProductDimProductInfo dateCode prod]
+
+  A --> RZ --> IT --> INP --> ENV --> VARGS
+  VARGS -- no --> UX
+  VARGS -- yes --> VPW
+  VPW -- no --> UX
+  VPW -- yes --> PMAP
+  PMAP -- 0 to 9 --> P0 --> OPT
+  PMAP -- A to M --> P1 --> OPT
+  PMAP -- N to Z --> P2 --> OPT
+  PMAP -- other --> PERR
+  OPT -- flag set --> WAF --> CONN
+  OPT -- no flag --> CONN
+  CONN -- DWPRD --> CONN1 --> MKSQL
+  CONN -- other --> CONN2 --> MKSQL
+  MKSQL --> RUN --> SPOOL --> ARCH --> MOVE --> CLEAN --> ENDN
+
+  RUN -. queries .-> T1
+  RUN -. queries .-> T2
+  RUN -. queries .-> T3
+  RUN -. queries .-> T4
+  RUN -. queries .-> T5
+
+  MKSQL --> DATA
+  MOVE --> OUTS

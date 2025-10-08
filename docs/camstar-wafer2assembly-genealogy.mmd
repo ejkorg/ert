@@ -1,0 +1,57 @@
+%% Camstar Wafer to Assembly Genealogy Extraction Flow
+%% Source refb_ingest/getCamstarWafer2AssemblyGenealogy.pl
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason capture wafer to assembly genealogy for analytics]
+  IT[Intention create AWGEN and Class 50 trace outputs for ERT]
+
+  INP[Inputs options source db and start hours and end hours and out gen and archive gen and out trace and archive trace and logfile]
+  ENV[Env ODBC DSNs for Camstar and Oracle creds from env DW_PASS and LOTG_PASS and UMR_PASS]
+  V1{Required options present}
+  UX[[Exit with usage]]
+
+  FAB[Get fab codes from DW site dim]
+  SQL[Build Camstar query based on site rules]
+  CONN[Connect to Camstar via ODBC DSN]
+  RUN[Execute query iterate rows]
+
+  %% Per row processing
+  P1[Compute assembly lot fields and defaults]
+  P2{Fairchild site or specific site rules}
+  WS1[Call ON LOT web service]
+  WS2[Call PP LOT PROD web service]
+  LG[Query LOTG to confirm or fallback]
+  UMR[Query UMR to fix UV5 laser scribe]
+  NORM[Normalize source lot and wafer id by fab]
+  ACC[Accumulate lines into gen and trace maps]
+
+  OUT1[Write AWGEN file gzip copy to archive move to out gen]
+  OUT2[Write trace csv per assembly lot and per fab source lot gzip archive move]
+  ENDN([End])
+
+  T1[BIWMES history and consume tables]
+  T2[BIWMARTS site dim]
+  T3[LOTG owner tables]
+  T4[UMR wafer map]
+  WS[RefDB web services onlot and pplotprod]
+
+  DATA[Data extracted assembly lot and lot type and product and txn date and from fab and material part and material lot and source lot and exensio wafer id and wafer number and quantities]
+  OUTS[Outputs Assembly2Wafer a2wgen gz and A2W W2A trace csv gz files]
+
+  A --> RZ --> IT --> INP --> ENV --> V1
+  V1 -- no --> UX
+  V1 -- yes --> FAB --> SQL --> CONN --> RUN --> P1 --> P2
+  P2 -- yes --> WS2 --> LG --> NORM
+  P2 -- no --> WS1 --> LG --> NORM
+  NORM --> UMR --> ACC
+  ACC --> DATA
+
+  RUN -. reads .-> T1
+  FAB -. reads .-> T2
+  LG -. reads .-> T3
+  UMR -. reads .-> T4
+  WS -. calls .-> WS
+
+  ACC --> OUT1 --> OUT2 --> OUTS --> ENDN

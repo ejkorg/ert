@@ -1,0 +1,39 @@
+%% Subcon Lot Reference Data Extraction Flow
+%% Source refb_ingest/getSubconLotRefData_LOTGDB.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  B[Inputs oracle user and password and sid and optional dates]
+  C[Check REFERENCE_DATA_DIR]
+  D{Valid environment}
+  E{Args count 3 or 5}
+  F[[Exit with usage]]
+  G[Build credentials and connection string]
+  H{SID is LOTGPRD}
+  I[Use ExaCC scan connection]
+  J[Use host and port connection]
+  K{Dates provided}
+  L[Use time filter between from date and to date]
+  M[Use default time filter last 32 hours]
+  N[Write temporary SQL script]
+  O[Run sqlplus with script]
+  P[Spool rows to tmp file]
+  Q[Copy tmp to archive and gzip]
+  R[Move tmp to final output]
+  S[Remove temporary SQL script]
+  T([End])
+
+  A --> B --> C --> D
+  D -- no --> F
+  D -- yes --> E
+  E -- no --> F
+  E -- yes --> G --> H
+  H -- yes --> I --> K
+  H -- no --> J --> K
+  K -- yes --> L --> N
+  K -- no --> M --> N
+  N --> O --> P --> Q --> R --> S --> T
+
+  U[Output columns LOT comma PARENT_LOT comma PRODUCT comma LOT_OWNER comma SOURCE_LOT]
+  R --> U

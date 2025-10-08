@@ -1,0 +1,59 @@
+%% LOTG Genealogy Extraction Flow
+%% Source refb_ingest/getLOTGGenealogy_LOTGDB.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason build lot lineage for analytics]
+  IT[Intention produce genealogy events for ERT]
+
+  INP[Inputs oracle user and password and sid]
+  ENV[Env REFERENCE_DATA_DIR must exist]
+  V1{User must be LOTGDB_USER}
+  V2{Password token must be LOTGDB_PASSWORD}
+  V3{SID must be LOTGPRD}
+  UX[[Exit with usage]]
+
+  CONN[Build ExaCC scan connection string]
+  TW[Time window recent posts last 24 hours and last 6 hours]
+
+  SQL1[Create SQL script with starting lots]
+  SQL2[Walk parent child links connect by]
+  SQL3[Translate parts and products and lot owner]
+  SQL4[Compute source lot and fab info]
+  RUN[Run sqlplus with script]
+  SPOOL[Spool rows to tmp file]
+  ARCH[Copy tmp to archive and gzip]
+  MOVE[Move tmp to final output]
+  CLEAN[Remove temporary SQL script]
+  ENDN([End])
+
+  T1[Table SRC_TGT_XREF]
+  T2[Table LOT_CLASS]
+  T3[Table LOTG_BOM_TYPE]
+  T4[Table PC_ITEM]
+  T5[Table ORN_OUT_ORACLE_TRAK]
+  T6[Table ORN_RECEIPTS]
+  T7[Table MFG_BANK_TO_STAGE]
+
+  DATA[Data extracted lot and parent lot and products and part types and fab names]
+  OUTS[Outputs lines with event type and time and fab names and lots and products]
+
+  A --> RZ --> IT --> INP --> ENV --> V1
+  V1 -- no --> UX
+  V1 -- yes --> V2
+  V2 -- no --> UX
+  V2 -- yes --> V3
+  V3 -- no --> UX
+  V3 -- yes --> CONN --> TW --> SQL1 --> SQL2 --> SQL3 --> SQL4 --> RUN --> SPOOL --> ARCH --> MOVE --> CLEAN --> ENDN
+
+  RUN -. queries .-> T1
+  RUN -. queries .-> T2
+  RUN -. queries .-> T3
+  RUN -. queries .-> T4
+  RUN -. queries .-> T5
+  RUN -. queries .-> T6
+  RUN -. queries .-> T7
+
+  SQL4 --> DATA
+  MOVE --> OUTS

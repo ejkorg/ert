@@ -1,0 +1,80 @@
+%% Snowflake E142 Module Trace Extraction Flow
+%% Source refb_ingest/getSnowflakeE142ModuleTrace.pl
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason build E142 die trace for analytics]
+  IT[Intention create Class 53 trace files per lot or wafer]
+
+  INP[Inputs source odbc and warehouse and schema and view name and flow and stage and out trace and optional get product and modfile and max hours or start and end hours and prod not regexp]
+  ENV[Env SNOW_USER and SNOW_PASS and DW_PASS and network to RefDB services]
+  V1{Required options present}
+  UX[[Exit with usage]]
+
+  TW{Use modfile or hours}
+  TWM[Compute start and end from modfile and max hours]
+  TWH[Compute start and end from start hours and end hours]
+
+  FABMAP[Fetch fab codes from DW site dim]
+  SQLB[Build SQL with recent material and laserscribe times and test lot times and view join]
+  ODBC[Connect to Snowflake via ODBC using service account]
+  RUN[Execute query and iterate rows]
+
+  %% Per row processing
+  FAC[Map backend facility code to name using fab codes]
+  LOTS[Get backend and assembly and test lots by stage]
+  BEMETA[Backend metadata get source lot and product]
+  TESTMETA[Test lot metadata if present]
+  WSMETA{Fab lot equals assembly lot}
+  ONSCR[Onscribe lookup by laser scribe]
+  FEMETA[Frontend metadata get fab source lot and product and fab id]
+  WFMT[Compose exensio wafer id from format]
+  STR[Create output line fields]
+  ACC[Accumulate into backend lot data and wafer data]
+
+  WR1{Stage is WAFER}
+  OUTW[Write per wafer files forward extension]
+  OUTB[Write per backend lot files backward extension]
+  GZ[Compress and move to output trace]
+  MOD[Update modfile with last meta modified date]
+  ENDN([End])
+
+  %% Data and outputs
+  DATA[Data extracted class fifty three columns for flow and facility and backend lots and diebond and singulation and leadframe and internal2did and test and wafer fields and raw silicon and epi and fab fields]
+  OUTS[Outputs E142 facility flow stage timestamp files per lot or per wafer with proper extensions gzipped]
+
+  %% External systems and tables
+  T_SF[Snowflake view in source schema]
+  T_DW[DWPRD site dim for fab codes]
+  T_PPF[EXN PRD PP FINALLOT metadata]
+  WS_ONLOT[RefDB on lot service]
+  WS_PPPROD[RefDB pp lot prod service]
+  WS_ONSCR[RefDB on scribe service]
+
+  A --> RZ --> IT --> INP --> ENV --> V1
+  V1 -- no --> UX
+  V1 -- yes --> TW
+  TW -- modfile --> TWM
+  TW -- hours --> TWH
+  TWM --> FABMAP
+  TWH --> FABMAP
+  FABMAP --> SQLB --> ODBC --> RUN --> FAC --> LOTS --> BEMETA --> TESTMETA --> WSMETA
+  WSMETA -- yes --> ONSCR --> FEMETA
+  WSMETA -- no --> FEMETA
+  FEMETA --> WFMT --> STR --> ACC --> WR1
+  WR1 -- yes --> OUTW --> GZ --> MOD --> ENDN
+  WR1 -- no --> OUTB --> GZ --> MOD --> ENDN
+
+  %% Dependencies
+  SQLB -. queries .-> T_SF
+  FABMAP -. queries .-> T_DW
+  BEMETA -. queries .-> T_PPF
+  BEMETA -. calls .-> WS_ONLOT
+  TESTMETA -. calls .-> WS_ONLOT
+  FEMETA -. calls .-> WS_ONLOT
+  FEMETA -. calls .-> WS_PPPROD
+  ONSCR -. calls .-> WS_ONSCR
+
+  STR --> DATA
+  GZ --> OUTS

@@ -1,0 +1,49 @@
+%% BIW Camstar Sort to Assembly Genealogy Extraction Flow
+%% Source refb_ingest/getBIWCamstarSortToAssemblyGenealogy.csh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason capture sort to assembly genealogy for analytics]
+  IT[Intention generate BIWCamstarSortToAssemblyGenealogy cast lines for ERT]
+
+  INP[Inputs oracle user and password and sid and hours back]
+  ENV[Env REFERENCE_DATA_DIR must exist]
+  VARGS{Args count is 4}
+  VPW{If password token YMS_PASSWORD then env YMS_PASSWORD must exist}
+  UX[[Exit with usage]]
+
+  VARS[Set date code and dirs and filenames]
+  MKSQL[Write SQL script to temp]
+  RUN[Run sqlplus with script]
+  LOG[Write log file]
+  SPOOL[Spool rows to tmp file]
+  ARCH[Copy tmp to archive and gzip]
+  MOVE[Move tmp to final output]
+  CLEAN[Remove temporary SQL script]
+  ENDN([End])
+
+  %% DW and Camstar tables used
+  T1[BIWMES CAMSTAR_LOTCOMP]
+  T2[BIWMES CAMSTAR_WIPLTH]
+  T3[BIWMES CAMSTAR_LOTATTRIBUTES]
+  T4[BIWMES WKSM_WIPLOT]
+  T5[BIWMES WKSM_PRODUCT]
+
+  DATA[Data extracted business unit and facility blank and parent lot and child lot and date code and parent product and child product and owner and parent owner and trans and transaction date time and source lot and source prod]
+  OUTS[Outputs BIWCamstarSortToAssemblyGenealogy dateCode cast]
+
+  A --> RZ --> IT --> INP --> ENV --> VARGS
+  VARGS -- no --> UX
+  VARGS -- yes --> VPW
+  VPW -- no --> UX
+  VPW -- yes --> VARS --> MKSQL --> RUN --> LOG --> SPOOL --> ARCH --> MOVE --> CLEAN --> ENDN
+
+  RUN -. queries .-> T1
+  RUN -. queries .-> T2
+  RUN -. queries .-> T3
+  RUN -. queries .-> T4
+  RUN -. queries .-> T5
+
+  MKSQL --> DATA
+  MOVE --> OUTS

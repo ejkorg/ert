@@ -1,0 +1,99 @@
+%% CZ Slice to Puck Extraction Flow
+%% Source refb_ingest/getCZSliceToPuck.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason map CZ slices to puck and starting lot]
+  IT[Intention produce slice to puck reference data for ERT]
+
+  INP[Inputs db user and password and sid and rel days start and rel days end]
+  ENV[Env REFERENCE_DATA_DIR must exist]
+  VARGS{Args count is 5}
+  VPW{Password token CZT_PASSWORD maps to appuser}
+  UX[[Exit with usage]]
+
+  CONN{SID is TEROTORR}
+  CONN1[Use alias connection]
+  CONN2[Use host and port connection]
+
+  VARS[Set date code and dirs and filenames including gwid temp]
+  MKSQL[Write SQL script to temp]
+  RUN[Run sqlplus with script]
+  LOG[Write log file]
+  SPOOL[Spool rows to tmp file]
+
+  %% SQL CTE pipeline
+  Q0[Header columns include GLOBAL_WAFER_ID]
+  Q1[evtime lots find recent KCLASER NEOS events in torrent]
+  Q2[lot 1 1 activity slices from actl lot parm and event view]
+  Q3[lot trace tree to find start lot]
+  Q4[start lot puck from lot parm]
+  Q5[lot comp activity for component events and origin lot]
+  Q6[comp multiples detect multiple components per slice]
+  Q7[comp defs historical comp definitions]
+  Q8[actl info enrich with slot and times]
+  Q9[actl trace tree and start lot puck for actl info]
+  Q10[lot comp multiple comp history merge 1 to 1 and 25 to 1]
+  Q11[all sics consolidate fields and supplier and order and slot]
+  Q12[final select and normalize supplier mapping and uwh run id rule]
+
+  POST[Post process add global wafer id]
+  GWID{Slice length greater than 11}
+  ECOFA[Lookup global wafer id in eCofA wafer table]
+  GWFOUND{Found valid global wafer id}
+  GWSET[Append global wafer id]
+  GWFALL[Fallback to use slice as global wafer id]
+  GWSHORT[Use slice as global wafer id when short]
+
+  ARCH[Copy tmp to archive and gzip]
+  MOVE[Move final to out file]
+  CLEAN[Remove temporary SQL script]
+  ENDN([End])
+
+  %% Tables used
+  T1[TORRENT ACTLEVCOUNT]
+  T2[TORRENT HISTEVCOUNT]
+  T3[ACTL]
+  T4[HIST]
+  T5[TORRENT EVENT_VIEW]
+  T6[TORRENT ACTLLOTPARMCOUNT]
+  T7[TORRENT WALPPARMCOUNT]
+  T8[TORRENT CATG]
+  T9[ECOFA COFCADM WAFER]
+
+  DATA[Data extracted SLICE and PUCK_ID and RUN_ID and SLICE_SOURCE_LOT and START_LOT and SLICE_START_TIME and SLICE_PARTNAME and SLICE_LOTTYPE and SLICE_SUPPLIERID and PUCK_HEIGHT and SLICE_ORDER and GLOBAL_WAFER_ID]
+  OUTS[Outputs CZSlice2Puck dateCode slice with archive gzip copy]
+
+  A --> RZ --> IT --> INP --> ENV --> VARGS
+  VARGS -- no --> UX
+  VARGS -- yes --> VPW
+  VPW -- no --> UX
+  VPW -- yes --> CONN
+  CONN -- alias --> CONN1 --> VARS --> MKSQL --> RUN --> LOG --> SPOOL
+  CONN -- other --> CONN2 --> VARS --> MKSQL --> RUN --> LOG --> SPOOL
+
+  %% CTE chain
+  SPOOL --> Q0 --> Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6 --> Q7 --> Q8 --> Q9 --> Q10 --> Q11 --> Q12 --> DATA
+
+  %% Post processing for global wafer id
+  DATA --> POST --> GWID
+  GWID -- yes --> ECOFA --> GWFOUND
+  GWFOUND -- yes --> GWSET --> ARCH
+  GWFOUND -- no --> GWFALL --> ARCH
+  GWID -- no --> GWSHORT --> ARCH
+
+  ARCH --> MOVE --> CLEAN --> ENDN
+
+  %% Table relations
+  RUN -. queries .-> T1
+  RUN -. queries .-> T2
+  RUN -. queries .-> T3
+  RUN -. queries .-> T4
+  RUN -. queries .-> T5
+  RUN -. queries .-> T6
+  RUN -. queries .-> T7
+  RUN -. queries .-> T8
+  ECOFA -. queries .-> T9
+
+  MOVE --> OUTS

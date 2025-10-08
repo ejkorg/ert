@@ -1,0 +1,62 @@
+%% eCofA Slice to Boule Extraction Flow
+%% Source refb_ingest/get_eCofA_SliceToBoule.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason map raw SiC wafers to boule slice lineage]
+  IT[Intention produce slice to boule reference data for ERT]
+
+  INP[Inputs db user and password and sid and schema owner and rel days start and rel days end]
+  ENV[Env REFERENCE_DATA_DIR must exist and Oracle client profile]
+  VARGS{Args count is 6}
+  VPW{Password token ECOFA_PASSWORD uses ECOA_PASS}
+  UX[[Exit with usage]]
+
+  CONN{SID is GPWEB0 or GRWEBPRD or GIQAQ or GIQAP}
+  CONN1[Use alias connection string]
+  CONN2[Use host and port connection string]
+
+  VARS[Set date code pid and dirs and filenames]
+  MKSQL[Write SQL script to temp]
+  RUN[Run sqlplus with script]
+  LOG[Write log file]
+  SPOOL[Spool rows to tmp file]
+  ARCH[Copy tmp to archive and gzip]
+  MOVE[Move tmp to final output]
+  CLEAN[Remove temporary SQL script]
+  ENDN([End])
+
+  %% eCofA tables used
+  T1[Schema RAWSILICON_LOT]
+  T2[Schema WAFER]
+  T3[Schema WAFER_PARAMETER]
+  T4[Schema WAFER_PARAM_MAP]
+
+  %% Query pipeline
+  Q1[recent_lots filter by date received between rel windows and exclude CZ2 vendor site]
+  Q2[recent_wafers join wafers by lot and scrape by scribe id handle invalid years and count lot occurrences]
+  Q3[params epi parameter presence by wafer id]
+  Q4[results compute PUCK RUN slice source lot mappings supplier mapping raw SiC only]
+
+  DATA[Data extracted SLICE and GLOBAL_WAFER_ID and PUCK_ID and RUN_ID and SLICE_SOURCE_LOT and START_LOT and SLICE_START_TIME and SLICE_PARTNAME and SLICE_SUPPLIERID and SLICE_ORDER]
+  OUTS[Outputs eCofASlice2Boule pid dateCode slice with archive gzip copy]
+
+  A --> RZ --> IT --> INP --> ENV --> VARGS
+  VARGS -- no --> UX
+  VARGS -- yes --> VPW
+  VPW -- no --> UX
+  VPW -- yes --> CONN
+  CONN -- alias --> CONN1 --> VARS --> MKSQL --> RUN --> LOG --> SPOOL
+  CONN -- other --> CONN2 --> VARS --> MKSQL --> RUN --> LOG --> SPOOL
+  SPOOL --> ARCH --> MOVE --> CLEAN --> ENDN
+
+  %% Tables referenced
+  RUN -. queries .-> T1
+  RUN -. queries .-> T2
+  RUN -. queries .-> T3
+  RUN -. queries .-> T4
+
+  %% CTE pipeline
+  MKSQL --> Q1 --> Q2 --> Q3 --> Q4 --> DATA
+  MOVE --> OUTS

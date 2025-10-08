@@ -1,0 +1,59 @@
+%% Camstar Assembly Split Genealogy and Reference Data Extraction Flow
+%% Source refb_ingest/getCamstarAssemblySplitGenealogyAndReferenceData.pl
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  RZ[Reason capture assembly split genealogy and reference data]
+  IT[Intention generate castSplitGen and castSplitFlot extracts for ERT]
+
+  INP[Inputs options OUT and OUTMESGEN and ARCHIVE_GEN and ARCHIVE_FLOT and LOGFILE]
+  ENV[Env ODBC DSNs MSSQL Perl and MSSQL Suzhou]
+  V1{Required options present}
+  UX[[Exit with usage]]
+
+  CEBU[Connect to Cebu Camstar ODS]
+  GENSQL[Run split genealogy SQL]
+  GENRES[Collect GEN rows into map]
+  WGEN[Write CamstarAssemblySplitGenealogy date castSplitGen]
+  ARCHGEN[Copy to archive and gzip archive copy then gzip output and remove plain]
+
+  REFSQL[Run reference data SQL]
+  REFRES[Collect FLOT rows into map]
+  WREF[Write CamstarAssemblyReferenceData date castSplitFlot]
+  ARCHREF[Copy to archive and gzip archive copy]
+  D1[Disconnect Cebu]
+
+  SZ[Connect to Suzhou Camstar ODS]
+  GENSQL2[Run split genealogy SQL]
+  GENRES2[Collect GEN rows into map]
+  WGEN2[Write CamstarAssemblySplitGenealogy date castSplitGen]
+  ARCHGEN2[Copy to archive and gzip archive copy then gzip output and remove plain]
+  REFSQL2[Run reference data SQL]
+  REFRES2[Collect FLOT rows into map]
+  WREF2[Write CamstarAssemblyReferenceData date castSplitFlot]
+  ARCHREF2[Copy to archive and gzip archive copy]
+  D2[Disconnect Suzhou]
+  ENDN([End])
+
+  T1[Tables historymainline and splithistory and details and lotattributes and workflow]
+
+  DATA[Data extracted for GEN gen date lot product gen event from lot from product source lot source product]
+  DATA2[Data extracted for FLOT lot lot owner product date code]
+  OUTS[Outputs castSplitGen gz per site and castSplitFlot per site]
+
+  A --> RZ --> IT --> INP --> ENV --> V1
+  V1 -- no --> UX
+  V1 -- yes --> CEBU --> GENSQL --> GENRES --> WGEN --> ARCHGEN --> REFSQL --> REFRES --> WREF --> ARCHREF --> D1 --> SZ
+  SZ --> GENSQL2 --> GENRES2 --> WGEN2 --> ARCHGEN2 --> REFSQL2 --> REFRES2 --> WREF2 --> ARCHREF2 --> D2 --> ENDN
+
+  GENSQL -. queries .-> T1
+  REFSQL -. queries .-> T1
+  GENSQL2 -. queries .-> T1
+  REFSQL2 -. queries .-> T1
+
+  WGEN --> DATA
+  WREF --> DATA2
+  WGEN2 --> DATA
+  WREF2 --> DATA2
+  ARCHGEN2 --> OUTS

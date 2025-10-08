@@ -1,0 +1,39 @@
+%% Subcon Final Lot Reference Data Extraction Flow
+%% Source refb_ingest/getSubconFlotRefData_LOTGDB.sh
+%% Keep labels simple to avoid render errors
+
+flowchart TD
+  A([Start])
+  B[Inputs oracle user and password and sid]
+  C[Check REFERENCE_DATA_DIR]
+  D{Valid environment}
+  E{Password provided}
+  F[[Exit with usage]]
+  G[Build credentials and connection string]
+  H{SID is LOTGPRD}
+  I[Use ExaCC scan connection]
+  J[Use host and port connection]
+  K[Use time filter last 2 days]
+  N[Write temporary SQL script]
+  O[Run sqlplus with script]
+  P[Spool rows to tmp file]
+  Q[Copy tmp to archive and gzip]
+  R[Move tmp to final output]
+  S[Remove temporary SQL script]
+  T([End])
+
+  V[Oracle tables SRC_TGT_XREF and LOT_CLASS and PC_ITEM]
+
+  A --> B --> C --> D
+  D -- no --> F
+  D -- yes --> E
+  E -- no --> F
+  E -- yes --> G --> H
+  H -- yes --> I --> K
+  H -- no --> J --> K
+  K --> N --> O --> P --> Q --> R --> S --> T
+
+  O -. queries .-> V
+
+  U[Output columns LOT comma LOT_OWNER comma PRODUCT comma DATE_CODE]
+  R --> U
